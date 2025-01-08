@@ -101,14 +101,14 @@ def auto_train(
         "num_layers": num_layers,
         "optimizer": "Adam",
         "optimizer_parameters": {
-            "lr": 0.001
+            "lr": lr
         },
         "criterion": "CrossEntropyLoss",
         "criterion_parameters": {
             "ignore_index": 0
         },
-        "batch_size": 512,
-        "teacher_forcing_ratio": 0.5
+        "batch_size": batch_size,
+        "teacher_forcing_ratio": teacher_forcing_ratio,
     }
 
     return model, lang_input, lang_output, params, (X_train, X_test, y_train, y_test)
