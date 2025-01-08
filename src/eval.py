@@ -25,8 +25,10 @@ def align_words(ref, hyp):
 def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None):
     if nb_predictions is None:
         pbar = trange(len(X_test), desc="Evaluating", unit="sentence")
-    else:
+    elif isinstance(nb_predictions, int)  and nb_predictions > 0:
         pbar = tqdm(sample(range(len(X_test)), nb_predictions), desc="Evaluating", unit="sentence")
+    else:
+        raise ValueError("nb_predictions must be a positive integer or None")
 
     res = []
     for i in pbar:
@@ -68,6 +70,9 @@ Alignment:\n{aligned}
 Exact match: {exact_match}
 WER: {wer:.2f}
 """)
+        if nb_predictions > 1:
+            print(f"Mean exact match ratio: {mean(r[-2] for r in res):.3f}")
+            print(f"Mean WER: {mean(r[-1] for r in res):.3f}")
 
     return res
 
@@ -76,15 +81,14 @@ def evaluate(X_test, y_test, lang_input, lang_output, model, device=None):
     device = device or torch_device("cuda" if is_available() else "cpu")
 
     res = core_eval(X_test, y_test, lang_input, lang_output, model, None, device)
-    len_res = len(res)
 
     exact_match = mean(r[-2] for r in res)
 
-    print(f"Exact match ratio: {exact_match:.2f}")
+    print(f"Exact match ratio: {exact_match:.3f}")
 
     wer_score = mean(r[-1] for r in res)
 
-    print(f"Mean WER: {wer_score:.2f}")
+    print(f"Mean WER: {wer_score:.3f}")
 
     res_for_save = [
         {
