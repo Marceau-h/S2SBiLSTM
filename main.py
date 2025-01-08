@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from argparse import ArgumentParser
 
 import torch
 
@@ -8,20 +9,23 @@ from src.eval import random_predict, evaluate
 from src.model import S2SBiLSTM
 from src.train import auto_train
 
-if __name__ == '__main__':
-    do_train = True
-    pho = True
-    make_lang = False
-    full_eval = False
+def main(
+        do_train: bool = False,
+        pho: bool = True,
+        make_lang: bool = False,
+        full_eval: bool = False,
 
-    num_epochs = 10
-    embed_size = 512
-    hidden_size = 512
-    num_layers = 1
-    lr = 1e-4
-    batch_size = 512
-    teacher_forcing_ratio = 0.5
-    nb_predictions = 10
+        num_epochs: int = 10,
+        embed_size: int = 512,
+        hidden_size: int = 512,
+        num_layers: int = 1,
+        lr: float = 1e-4,
+        batch_size: int = 2048,
+        teacher_forcing_ratio: float = 0.5,
+        nb_predictions: int = 10,
+):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     params_path = "params_pho.json" if pho else "params.json"
     model_path = "model_pho.pth" if pho else "model.pth"
@@ -30,8 +34,6 @@ if __name__ == '__main__':
     y_data = 'y_pho.npy' if pho else 'y.npy'
     lang_path = 'lang_pho.json' if pho else 'lang.json'
     eval_path = Path('results_pho.json' if pho else 'results.json')
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if make_lang:
         X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
@@ -107,3 +109,42 @@ if __name__ == '__main__':
         df.write_ndjson(eval_path.with_suffix(".ndjson"))
         df.write_parquet(eval_path.with_suffix(".parquet"))
         df.write_json(eval_path.with_suffix(".json"))
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+
+    parser.add_argument("--train", action="store_true", help="Train the model")
+    parser.add_argument("--pho", action="store_true", help="Use phonetic data")
+    parser.add_argument("--make_lang", action="store_true", help="Make language data")
+    parser.add_argument("--full_eval", action="store_true", help="Run full evaluation")
+
+    parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs")
+    parser.add_argument("--embed_size", type=int, default=512, help="Embedding size")
+    parser.add_argument("--hidden_size", type=int, default=512, help="Hidden size")
+    parser.add_argument("--num_layers", type=int, default=1, help="Number of layers")
+    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--batch_size", type=int, default=2048, help="Batch size")
+    parser.add_argument("--teacher_forcing_ratio", type=float, default=0.5, help="Teacher forcing ratio")
+    parser.add_argument("--nb_predictions", type=int, default=10, help="Number of predictions to make")
+
+    args = parser.parse_args()
+
+    main(
+        do_train=args.train,
+        pho=args.pho,
+        make_lang=args.make_lang,
+        full_eval=args.full_eval,
+        num_epochs=args.num_epochs,
+        embed_size=args.embed_size,
+        hidden_size=args.hidden_size,
+        num_layers=args.num_layers,
+        lr=args.lr,
+        batch_size=args.batch_size,
+        teacher_forcing_ratio=args.teacher_forcing_ratio,
+        nb_predictions=args.nb_predictions
+    )
+
+    print("Done :)")
+
+
+
