@@ -3,10 +3,10 @@ from pathlib import Path
 
 import torch
 
-from Language import Language, read_data
-from eval import random_predict, evaluate
-from model import S2SBiLSTM
-from train import auto_train
+from src.Language import Language, read_data
+from src.eval import random_predict, evaluate
+from src.model import S2SBiLSTM
+from src.train import auto_train
 
 if __name__ == '__main__':
     do_train = True
