@@ -96,8 +96,8 @@ def evaluate(X_test, y_test, lang_input, lang_output, model, device=None):
             "target": " | ".join(r[1]),
             "predicted": " | ".join(r[2]),
             "alignment": r[3],
-            "target_length": len(r[1]),
-            "predicted_length": len(r[2]),
+            "target_length": len(r[1]) - 2,
+            "predicted_length": len(r[2]) - 2,
             "exact_match": r[4],
             "wer": r[5]
         }
