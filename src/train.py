@@ -5,8 +5,8 @@ from torch import optim, nn
 from torch.utils.data import DataLoader
 from tqdm.auto import trange
 
-from Language import read_data
-from model import S2SBiLSTM
+from src.Language import read_data
+from src.model import S2SBiLSTM
 
 
 def train(model, dataloader, optimizer, criterion, device, num_epochs=10, teacher_forcing_ratio=0.5):
