@@ -1,0 +1,20 @@
+# Environment folders
+.idea/
+.venv/
+venv/
+
+# Compiled sources
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Models and languages
+*.npy
+*.pth
+
+# Results and parameters
+*.json
+*.csv
+*.ndjson
+*.parquet
