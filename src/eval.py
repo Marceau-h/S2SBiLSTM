@@ -7,6 +7,11 @@ from torch import device as torch_device
 from torch.cuda import is_available
 from tqdm.auto import trange, tqdm
 
+try:
+    import cowsay
+except ImportError:
+    cowsay = None
+
 multi_stars = re.compile(r"\*{2,}")
 
 
@@ -20,6 +25,35 @@ def align_words(ref, hyp):
     alignement = f"{ref[5:]}\n{hyp[5:]}".replace(" ", " | ")
 
     return alignement, computed.wer
+
+def predict(model, input_sentence, lang_input, lang_output, device=None):
+    device = device or torch_device("cuda" if is_available() else "cpu")
+
+    input_sentence_lst = [lang_input.index2token[token] for token in input_sentence if token != lang_input.PAD_ID]
+    predicted_output_lst = model.predict(
+        input_sentence, max_len=lang_output.n_tokens + 1, device=device, lang_output=lang_output
+    )
+
+    return input_sentence_lst, predicted_output_lst
+
+def do_one_sent(model, sentence, lang_input, lang_output, device=None):
+    device = device or torch_device("cuda" if is_available() else "cpu")
+
+    input_sentence = [lang_input.SOS_ID] + [lang_input.token2index[token] for token in lang_input.sent_iter(sentence)] + [lang_input.EOS_ID]
+
+    input_sentence_lst, predicted_output_lst = predict(model, input_sentence, lang_input, lang_output, device)
+
+    line1 = f"Input sentence: {sentence}"
+    line2 = f"Predicted output: {' | '.join(predicted_output_lst)}"
+    max_len = max(len(line1), len(line2))
+    txt = f"{line1:^{max_len}}\n{line2:^{max_len}}"
+
+    if cowsay is not None:
+        cowsay.tux(txt)
+    else:
+        print("\n\t\t------------------\t\t\n\n" + txt + "\n\n\t\t------------------\t\t\n")
+
+    return input_sentence_lst, predicted_output_lst
 
 
 def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None):
@@ -35,12 +69,8 @@ def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=Non
         input_sentence = X_test[i]
         target_output = y_test[i]
 
-        input_sentence_lst = (
-            [lang_input.index2token[token] for token in input_sentence if token != lang_input.PAD_ID])
-        target_output_lst = ([lang_output.index2token[token] for token in target_output if token != lang_output.PAD_ID])
-
-        predicted_output_lst = model.predict(input_sentence, max_len=lang_output.n_tokens + 1, device=device,
-                                             lang_output=lang_output)
+        input_sentence_lst, predicted_output_lst = predict(model, input_sentence, lang_input, lang_output, device)
+        target_output_lst = [lang_output.index2token[token] for token in target_output if token != lang_output.PAD_ID]
 
         exact_match = target_output_lst == predicted_output_lst
 
