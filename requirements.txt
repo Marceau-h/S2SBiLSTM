@@ -3,3 +3,4 @@ scikit-learn
 torch
 tqdm
 jiwer
+cowsay
