@@ -59,7 +59,7 @@ class S2SBiLSTM(nn.Module):
 
     def predict(self, src, max_len, device, lang_output):
         self.eval()
-        if isinstance(src, np.ndarray):
+        if isinstance(src, (np.ndarray, list)):
             src = torch.tensor(src, device=device)
         else:
             src = src.to(device)
