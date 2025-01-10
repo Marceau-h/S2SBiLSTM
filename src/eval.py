@@ -14,12 +14,18 @@ except ImportError:
 
 multi_stars = re.compile(r"\*{2,}")
 
+def dont(x):
+    """
+    Just don't (identity function)
+    """
+    return x
+
 
 def align_words(ref, hyp):
     if ref == hyp:
         return None, 0
 
-    computed = process_words([ref], [hyp], lambda x: x, lambda x: x)
+    computed = process_words([ref], [hyp], dont, dont)
     alignement = visualize_alignment(computed, show_measures=False)
     _, ref, hyp, *_ = multi_stars.sub("@", alignement).split("\n")
     alignement = f"{ref[5:]}\n{hyp[5:]}".replace(" ", " | ")
