@@ -124,26 +124,29 @@ def main(
         X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
         print("Model, data, and parameters loaded successfully")
 
-    # Save model architecture for schematic visualization
-    from torch.utils.data import DataLoader
+    # # push to hub
+    # model.push_to_hub("Marceau-H/S2SBiLSTM")
 
-    dataset = torch.utils.data.TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-    src, trg = next(iter(dataloader))
-    src, trg = src.to(device), trg.to(device)
-    output = model(src, trg, teacher_forcing_ratio)
-
-    from torchviz import make_dot
-
-    graph = make_dot(output, params=dict(list(model.named_parameters())))  # , show_attrs=True, show_saved=True)
-
-    graph.render("model", format="png")
-
-    from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter('runs/model_visualization')
-    writer.add_graph(model, [src, trg, teacher_forcing_ratio])
-    writer.close()
+    # # Save model architecture for schematic visualization
+    # from torch.utils.data import DataLoader
+    #
+    # dataset = torch.utils.data.TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
+    # dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    #
+    # src, trg = next(iter(dataloader))
+    # src, trg = src.to(device), trg.to(device)
+    # output = model(src, trg, teacher_forcing_ratio)
+    #
+    # from torchviz import make_dot
+    #
+    # graph = make_dot(output, params=dict(list(model.named_parameters())))  # , show_attrs=True, show_saved=True)
+    #
+    # graph.render("model", format="png")
+    #
+    # from torch.utils.tensorboard import SummaryWriter
+    # writer = SummaryWriter('runs/model_visualization')
+    # writer.add_graph(model, [src, trg, teacher_forcing_ratio])
+    # writer.close()
 
     # Test prediction
     random_predict(X_test, y_test, lang_input, lang_output, model, device=device, nb_predictions=nb_predictions)
