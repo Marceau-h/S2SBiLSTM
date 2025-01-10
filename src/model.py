@@ -1,8 +1,15 @@
 import torch
 from torch import nn
 import numpy as np
+from huggingface_hub import PyTorchModelHubMixin
 
-class S2SBiLSTM(nn.Module):
+class S2SBiLSTM(
+    nn.Module,
+    PyTorchModelHubMixin,
+    repo_url="https://huggingface.co/Marceau-H/S2SBiLSTM",
+    language="French",
+    license="AGPL-3.0",
+):
     def __init__(self, input_size, output_size, embed_size, hidden_size, num_layers=1):
         super(S2SBiLSTM, self).__init__()
 
