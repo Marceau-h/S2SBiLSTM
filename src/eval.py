@@ -12,7 +12,7 @@ try:
 except ImportError:
     cowsay = None
 
-multi_stars = re.compile(r"\*{2,}")
+multi_stars = re.compile(r"\*+")
 
 def dont(x):
     """
