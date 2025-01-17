@@ -5,7 +5,7 @@ from statistics import mean
 from jiwer import process_words, visualize_alignment
 from torch import device as torch_device
 from torch.cuda import is_available
-from tqdm.auto import trange, tqdm
+from tqdm.auto import tqdm
 
 try:
     import cowsay
@@ -13,6 +13,7 @@ except ImportError:
     cowsay = None
 
 multi_stars = re.compile(r"\*+")
+
 
 def dont(x):
     """
@@ -32,6 +33,7 @@ def align_words(ref, hyp):
 
     return alignement, computed.wer
 
+
 def predict(model, input_sentence, lang_input, lang_output, device=None):
     device = device or torch_device("cuda" if is_available() else "cpu")
 
@@ -42,10 +44,12 @@ def predict(model, input_sentence, lang_input, lang_output, device=None):
 
     return input_sentence_lst, predicted_output_lst
 
+
 def do_one_sent(model, sentence, lang_input, lang_output, device=None):
     device = device or torch_device("cuda" if is_available() else "cpu")
 
-    input_sentence = [lang_input.SOS_ID] + [lang_input.token2index[token] for token in lang_input.sent_iter(sentence)] + [lang_input.EOS_ID]
+    input_sentence = [lang_input.SOS_ID] + [lang_input.token2index[token] for token in
+                                            lang_input.sent_iter(sentence)] + [lang_input.EOS_ID]
 
     input_sentence_lst, predicted_output_lst = predict(model, input_sentence, lang_input, lang_output, device)
 
@@ -62,13 +66,16 @@ def do_one_sent(model, sentence, lang_input, lang_output, device=None):
     return input_sentence_lst, predicted_output_lst
 
 
-def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None):
+def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None, do_print=True):
     if nb_predictions is None:
-        pbar = trange(len(X_test), desc="Evaluating", unit="sentence")
-    elif isinstance(nb_predictions, int)  and nb_predictions > 0:
-        pbar = tqdm(sample(range(len(X_test)), nb_predictions), desc="Evaluating", unit="sentence")
+        pbar = range(len(X_test))
+    elif isinstance(nb_predictions, int) and nb_predictions > 0:
+        pbar = sample(range(len(X_test)), nb_predictions)
     else:
         raise ValueError("nb_predictions must be a positive integer or None")
+
+    if do_print:
+        pbar = tqdm(pbar, desc="Evaluating", unit="sentence")
 
     res = []
     for i in pbar:
@@ -113,18 +120,16 @@ WER: {wer:.2f}
     return res
 
 
-def evaluate(X_test, y_test, lang_input, lang_output, model, device=None):
+def evaluate(X_test, y_test, lang_input, lang_output, model, device=None, do_print=True):
     device = device or torch_device("cuda" if is_available() else "cpu")
 
-    res = core_eval(X_test, y_test, lang_input, lang_output, model, None, device)
+    res = core_eval(X_test, y_test, lang_input, lang_output, model, None, device, do_print)
 
     exact_match = mean(r[-2] for r in res)
-
-    print(f"Exact match ratio: {exact_match:.3f}")
-
     wer_score = mean(r[-1] for r in res)
 
-    print(f"Mean WER: {wer_score:.3f}")
+    if do_print:
+        print(f"Exact match ratio: {exact_match:.3f}\nMean WER: {wer_score:.3f}")
 
     res_for_save = [
         {
