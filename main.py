@@ -39,7 +39,9 @@ def main(
             lang_input,
             lang_output,
             params,
-            (X_train, X_test, y_train, y_test)
+            losses,
+            evals,
+            (X_train, X_test, y_train, y_test),
         ) = auto_train(
             num_epochs=num_epochs,
             embed_size=embed_size,
@@ -51,7 +53,7 @@ def main(
             x_data=x_data,
             y_data=y_data,
             lang_path=lang_path,
-            device=device
+            device=device,
         )
 
         print(params)

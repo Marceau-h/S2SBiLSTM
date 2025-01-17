@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import torch
 from torch import optim, nn
@@ -9,8 +10,22 @@ from src.Language import read_data
 from src.model import S2SBiLSTM
 
 
-def train(model, dataloader, optimizer, criterion, device, num_epochs=10, teacher_forcing_ratio=0.5):
+def train(
+        model,
+        dataloader,
+        optimizer,
+        criterion,
+        device,
+        num_epochs=10,
+        teacher_forcing_ratio=0.5,
+        eval_every=None,
+        eval_fn=None,
+        eval_args=None
+):
     model.train()
+
+    losses = []
+    evals = []
 
     pbar = trange(1, num_epochs + 1, desc="Epochs", unit="epoch")
     for epoch in pbar:
@@ -38,12 +53,27 @@ def train(model, dataloader, optimizer, criterion, device, num_epochs=10, teache
         # print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss/len(dataloader):.4f}")
         pbar.set_postfix(loss=epoch_loss / len(dataloader))
 
+        if eval_every and eval_fn:
+            if epoch % eval_every == 0:
+                losses.append(epoch_loss / len(dataloader))
+                evals.append(eval_fn(**eval_args))
+                model.train()
+
+    if not eval_every:
+        losses.append(epoch_loss / len(dataloader))
+    elif epoch % eval_every != 0:
+        losses.append(epoch_loss / len(dataloader))
+        if eval_fn:
+            evals.append(eval_fn(**eval_args))
+
+    return model, losses, evals
+
 
 def auto_train(
         num_epochs: int = 10,
         embed_size: int = 256,
         hidden_size: int = 512,
-        num_layers: int = 2,
+        num_layers: int = 1,
         lr: float = 1e-3,
         batch_size: int = 512,
         teacher_forcing_ratio: float = 0.5,
@@ -51,6 +81,9 @@ def auto_train(
         x_data: str | Path = 'X.npy',
         y_data: str | Path = 'y.npy',
         lang_path: str | Path = 'lang.json',
+        eval_every: Optional[int] = None,
+        eval_fn: "function" = None,
+        eval_args: dict = None,
         device=None
 ):
     if isinstance(save_root, str):
@@ -59,6 +92,7 @@ def auto_train(
         raise ValueError("save_root must be a string or a Path object")
 
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
     # Read data
     X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(
@@ -82,14 +116,22 @@ def auto_train(
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     # Train model
-    train(
+    model, losses, evals = train(
         model,
         dataloader,
         optimizer,
         criterion,
         device=device,
         num_epochs=num_epochs,
-        teacher_forcing_ratio=teacher_forcing_ratio
+        teacher_forcing_ratio=teacher_forcing_ratio,
+        eval_every=eval_every,
+        eval_fn=eval_fn,
+        eval_args={
+            **eval_args,
+            "lang_input": lang_input,
+            "lang_output": lang_output,
+            "model": model,
+        }
     )
 
     params = {
@@ -111,4 +153,4 @@ def auto_train(
         "teacher_forcing_ratio": teacher_forcing_ratio,
     }
 
-    return model, lang_input, lang_output, params, (X_train, X_test, y_train, y_test)
+    return model, lang_input, lang_output, params, losses, evals, (X_train, X_test, y_train, y_test)
