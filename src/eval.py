@@ -141,3 +141,15 @@ def evaluate(X_test, y_test, lang_input, lang_output, model, device=None):
     ]
 
     return res, exact_match, wer_score, res_for_save
+
+
+def do_full_eval(X_test, y_test, lang_input, lang_output, model, eval_path, device):
+    res, accuracy, wer_score, res_for_save = evaluate(X_test, y_test, lang_input, lang_output, model, device=device)
+
+    import polars as pl
+
+    df = pl.DataFrame(res_for_save)
+    df.write_csv(eval_path.with_suffix(".csv"))
+    df.write_ndjson(eval_path.with_suffix(".ndjson"))
+    df.write_parquet(eval_path.with_suffix(".parquet"))
+    df.write_json(eval_path.with_suffix(".json"))

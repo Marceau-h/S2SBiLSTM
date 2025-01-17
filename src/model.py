@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import torch
 from torch import nn
 import numpy as np
@@ -100,3 +103,56 @@ class S2SBiLSTM(
                 input = torch.tensor([predicted_token], device=device)
 
         return [lang_output.index2token[token] for token in outputs]
+
+def save_model(model, params, model_path, params_path):
+    torch.save(model.state_dict(), model_path)
+
+    params["model_path"] = model_path
+
+    with open(params_path, "w") as f:
+        json.dump(params, f, ensure_ascii=False, indent=4)
+
+    print("Model and parameters saved successfully")
+
+
+def load_model(params_path, model_path, device):
+    with open(params_path, "r") as f:
+        params = json.load(f)
+
+    print(params)
+
+    model = S2SBiLSTM(
+        params["input_size"],
+        params["output_size"],
+        params["embed_size"],
+        params["hidden_size"],
+        params["num_layers"]
+    ).to(device)
+
+    model.load_state_dict(
+        torch.load(
+            f=params.get("model_path", model_path),
+            weights_only=True
+        )
+    )
+
+    return model
+
+def paths(pho):
+    relative_to_root = 0
+    cwd = Path.cwd()
+    while cwd.name != "S2SBiLSTM":
+        relative_to_root += 1
+        cwd = cwd.parent
+
+    prepend = "../" * relative_to_root
+
+    params_path = prepend / Path("params_pho.json" if pho else "params.json")
+    model_path = prepend / Path("model_pho.pth" if pho else "model.pth")
+    og_lang_path = prepend / Path("all_noyeaux_pho.txt" if pho else "all_noyeaux.txt")
+    x_data = prepend / Path("X_pho.npy" if pho else "X.npy")
+    y_data = prepend / Path("y_pho.npy" if pho else "y.npy")
+    lang_path = prepend / Path("lang_pho.json" if pho else "lang.json")
+    eval_path = prepend / Path("results_pho.json" if pho else "results.json")
+
+    return params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path
