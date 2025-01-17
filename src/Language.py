@@ -216,7 +216,7 @@ def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_p
     assert lang_path.exists(), f"Language path {lang_path} does not exist"
 
     X, y, lang_input, lang_output = Language.load_data(x_path, y_path, lang_path)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
 
     return X_train, X_test, y_train, y_test, lang_input, lang_output
 
