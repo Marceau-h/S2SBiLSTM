@@ -202,7 +202,7 @@ def main(
 
     import plotly.express as px
 
-    range_ = range(num+1)
+    range_ = range(1, num+1)
     for data, data_name in ((losses, "Loss"), (evals, "WER")):
         title = f"{mode} vs {data_name}"
         fig = px.line(x=range_, y=data, labels={"x": mode, "y": data_name}, title=title)
