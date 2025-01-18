@@ -1,10 +1,11 @@
-from random import sample
+from random import sample, seed
 
 from src.Language import read_data
 from src.eval import evaluate
 from src.train import auto_train
 from src.model import S2SBiLSTM, paths
 
+seed(42)
 
 def test_sample(
         X_test,
@@ -136,7 +137,7 @@ def test_lr(
     return losses, wers
 
 def main(
-        num=50,
+        num=300,
         mode="epochs",
         pho=True,
         eval_size=100,
@@ -209,7 +210,11 @@ def main(
         fig.write_image(f"{title}.png")
         fig.write_image(f"{title}.svg")
         fig.write_image(f"{title}.eps")
-        fig.show()
+
+        try:
+            fig.show()
+        except:
+            pass
 
     return losses, evals
 
