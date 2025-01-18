@@ -6,3 +6,5 @@ jiwer
 cowsay
 huggingface_hub
 plotly
+pandas
+kaleido
