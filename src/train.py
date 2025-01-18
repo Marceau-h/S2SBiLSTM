@@ -127,7 +127,7 @@ def auto_train(
         eval_every=eval_every,
         eval_fn=eval_fn,
         eval_args={
-            **eval_args,
+            **(eval_args or {}),
             "lang_input": lang_input,
             "lang_output": lang_output,
             "model": model,
