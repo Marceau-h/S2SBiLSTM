@@ -209,7 +209,7 @@ def main(
         fig.write_html(f"{title}.html")
         fig.write_image(f"{title}.png")
         fig.write_image(f"{title}.svg")
-        fig.write_image(f"{title}.eps")
+        # fig.write_image(f"{title}.eps")
 
         try:
             fig.show()
