@@ -137,7 +137,7 @@ def test_lr(
     return losses, wers
 
 def main(
-        num=300,
+        num=10,
         mode="epochs",
         pho=True,
         eval_size=100,
@@ -220,4 +220,14 @@ def main(
 
 
 if __name__ == '__main__':
-    main()
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument("--num", type=int, default=10)
+    parser.add_argument("--mode", type=str, default="epochs")
+    parser.add_argument("--pho", action="store_true")
+    parser.add_argument("--eval_size", type=int, default=100)
+    args = parser.parse_args()
+
+    main(**vars(args))
+
