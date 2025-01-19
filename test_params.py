@@ -193,8 +193,9 @@ def main(
             )
 
         case "lr":
+            range_ = [1/(10**i) for i in range(num)]
             losses, evals = test_lr(
-                [1e-2, 1e-3, 1e-4, 1e-5],
+                range_,
                 eval_size=eval_size,
                 **train_args,
             )
