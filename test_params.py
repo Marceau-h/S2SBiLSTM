@@ -65,6 +65,7 @@ def test_embed_size(
         res, exact_match, wer_score, res_for_save = evaluate(X_sample, y_sample, lang_input, lang_output, model)
 
         wers.append(wer_score)
+        losses.append(losses[-1])
 
     return losses, wers
 
@@ -88,6 +89,7 @@ def test_hidden_size(
         res, exact_match, wer_score, res_for_save = evaluate(X_sample, y_sample, lang_input, lang_output, model)
 
         wers.append(wer_score)
+        losses.append(losses[-1])
 
     return losses, wers
 
@@ -110,6 +112,7 @@ def test_num_layers(
         res, exact_match, wer_score, res_for_save = evaluate(X_sample, y_sample, lang_input, lang_output, model)
 
         wers.append(wer_score)
+        losses.append(losses[-1])
 
     return losses, wers
 
@@ -133,6 +136,7 @@ def test_lr(
         res, exact_match, wer_score, res_for_save = evaluate(X_sample, y_sample, lang_input, lang_output, model)
 
         wers.append(wer_score)
+        losses.append(losses[-1])
 
     return losses, wers
 
@@ -202,8 +206,11 @@ def main(
 
     import plotly.express as px
 
-    range_ = range(1, num+1)
+    range_ = range_ if mode != "epochs" else range(1, num+1)
     for data, data_name in ((losses, "Loss"), (evals, "WER")):
+        if mode != "epochs" and data_name == "Loss":
+            continue
+
         title = f"{mode} vs {data_name}"
         fig = px.line(x=range_, y=data, labels={"x": mode, "y": data_name}, title=title)
         fig.write_html(f"{title}.html")
