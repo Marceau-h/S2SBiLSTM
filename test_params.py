@@ -214,6 +214,11 @@ def main(
 
         title = f"{mode} vs {data_name}"
         fig = px.line(x=range_, y=data, labels={"x": mode, "y": data_name}, title=title)
+
+        if mode == "lr":
+            fig.update_xaxes(type="log")
+            fig.update_layout(xaxis_autorange="reversed")
+
         fig.write_html(f"{title}.html")
         fig.write_image(f"{title}.png")
         fig.write_image(f"{title}.svg")
