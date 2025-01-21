@@ -215,9 +215,13 @@ def main(
         title = f"{mode} vs {data_name}"
         fig = px.line(x=range_, y=data, labels={"x": mode, "y": data_name}, title=title)
 
+        fig.update_layout(
+            xaxis_ticktext=[str(i) for i in range_],
+        )
+
         if mode == "lr":
             fig.update_xaxes(type="log")
-            fig.update_layout(xaxis_autorange="reversed")
+            fig.update_layout(xaxis_autorange="reverse")
 
         fig.write_html(f"{title}.html")
         fig.write_image(f"{title}.png")
