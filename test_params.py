@@ -215,9 +215,10 @@ def main(
         title = f"{mode} vs {data_name}"
         fig = px.line(x=range_, y=data, labels={"x": mode, "y": data_name}, title=title)
 
-        fig.update_layout(
-            xaxis_ticktext=[str(i) for i in range_],
-        )
+        if mode != "epochs":
+            fig.update_layout(
+                xaxis_ticktext=[str(i) for i in range_],
+            )
 
         if mode == "lr":
             fig.update_xaxes(type="log")
