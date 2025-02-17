@@ -5,7 +5,6 @@ from unicodedata import normalize
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from spacy.lang.fi.tokenizer_exceptions import suffix
 
 
 class Language:
