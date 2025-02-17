@@ -5,6 +5,7 @@ from unicodedata import normalize
 
 import numpy as np
 from sklearn.model_selection import train_test_split
+from spacy.lang.fi.tokenizer_exceptions import suffix
 
 
 class Language:
@@ -120,6 +121,69 @@ class Language:
         return X, y, l1, l2
 
     @classmethod
+    def read_data_from_json(
+            cls,
+            data_path: str | Path,
+            max_length=3_500,
+    ) -> Tuple[np.array, np.array, "Language", "Language"]:
+        if isinstance(data_path, str):
+            data_path = Path(data_path)
+        elif not isinstance(data_path, Path):
+            raise ValueError("data_path must be a string or a Path object")
+
+        assert data_path.exists(), f"Data path {data_path} does not exist"
+
+        with data_path.open("r") as f:
+            pairs = json.load(f)
+
+        pairs = [
+            (
+                e, k
+            )
+            for k, v in pairs.items()
+            for e in v
+            if len(k) <= max_length
+            and len(e) <= max_length
+        ]
+
+        lens = [len(k) for k, _ in pairs]
+        print(min(lens), max(lens), sum(lens) / len(lens))
+
+        l1 = cls('1')
+        l2 = cls('2', sep='-')
+
+        for pair in pairs:
+            l1.add_sentence(pair[0])
+            l2.add_sentence(pair[1])
+
+        X, y = zip(
+            *[
+                (
+                    [cls.SOS_ID] +
+                    [
+                        l1.token2index[token] for token in l1.sent_iter(pair[0])
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l1.max_length - len(l1.sent_iter(pair[0]))),
+                    [cls.SOS_ID] +
+                    [
+                        l2.token2index[token] for token in l2.sent_iter(pair[1])
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l2.max_length - len(l2.sent_iter(pair[1])))
+                )
+                for pair in pairs
+                # if (len_pair0 := len(pair[0])) <= max_length
+                # and (len_pair1 := len(pair[1])) <= max_length
+            ]
+        )
+
+        print(len(X), len(y))
+        print(X[0], y[0])
+        print(len(X[0]), len(y[0]))
+
+        X = np.array(X)
+        y = np.array(y)
+        return X, y, l1, l2
+
+
+    @classmethod
     def load_data(
             cls,
             X_path: str | Path,
@@ -221,13 +285,22 @@ def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_p
     return X_train, X_test, y_train, y_test, lang_input, lang_output
 
 if __name__ == '__main__':
-    pho = True
+    from model import paths
 
-    x_data = 'X_pho.npy' if pho else 'X.npy'
-    y_data = 'y_pho.npy' if pho else 'y.npy'
-    lang_path = 'lang_pho.json' if pho else 'lang.json'
-    og_lang_path = 'all_noyeaux_pho.txt' if pho else 'all_noyeaux.txt'
+    pho = False
+    json_ = True
+    midi = True
 
+    suffix = "" if not json else "_midi" if midi else "_ly"
 
-    X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
+
+    print(params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path)
+
+    if json_:
+        X, y, l1, l2 = Language.read_data_from_json(og_lang_path)
+    else:
+        X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+
     Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
+

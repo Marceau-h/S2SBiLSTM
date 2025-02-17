@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
 
-import torch
-from torch import nn
 import numpy as np
+import torch
 from huggingface_hub import PyTorchModelHubMixin
+from torch import nn
+
 
 class S2SBiLSTM(
     nn.Module,
@@ -104,6 +105,7 @@ class S2SBiLSTM(
 
         return [lang_output.index2token[token] for token in outputs]
 
+
 def save_model(model, params, model_path, params_path):
     torch.save(model.state_dict(), model_path)
 
@@ -138,7 +140,14 @@ def load_model(params_path, model_path, device):
 
     return model
 
-def paths(pho):
+
+def paths(pho: bool = False, suffix: str = "", json_: bool = False) -> tuple[str, str, str, str, str, str, str]:
+    assert isinstance(pho, bool), "pho must be a boolean"
+    assert isinstance(suffix, str), "suffix must be a string"
+
+    if pho and not suffix:  # if pho is True and suffix is empty
+        suffix = "_pho"
+
     relative_to_root = 0
     cwd = Path.cwd()
     while cwd.name != "S2SBiLSTM":
@@ -147,12 +156,21 @@ def paths(pho):
 
     prepend = "../" * relative_to_root
 
-    params_path = prepend / Path("params_pho.json" if pho else "params.json")
-    model_path = prepend / Path("model_pho.pth" if pho else "model.pth")
-    og_lang_path = prepend / Path("all_noyeaux_pho.txt" if pho else "all_noyeaux.txt")
-    x_data = prepend / Path("X_pho.npy" if pho else "X.npy")
-    y_data = prepend / Path("y_pho.npy" if pho else "y.npy")
-    lang_path = prepend / Path("lang_pho.json" if pho else "lang.json")
-    eval_path = prepend / Path("results_pho.json" if pho else "results.json")
+    # params_path = prepend / Path("params_pho.json" if pho else "params.json")
+    # model_path = prepend / Path("model_pho.pth" if pho else "model.pth")
+    # og_lang_path = prepend / Path("all_noyeaux_pho.txt" if pho else "all_noyeaux.txt")
+    # x_data = prepend / Path("X_pho.npy" if pho else "X.npy")
+    # y_data = prepend / Path("y_pho.npy" if pho else "y.npy")
+    # lang_path = prepend / Path("lang_pho.json" if pho else "lang.json")
+    # eval_path = prepend / Path("results_pho.json" if pho else "results.json")
 
-    return params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path
+    params_path = prepend + "params" + suffix + ".json"
+    model_path = prepend + "model" + suffix + ".pth"
+    og_lang_path = prepend + "all_noyeaux" + suffix + ".txt"
+    x_data = prepend + "X" + suffix + ".npy"
+    y_data = prepend + "y" + suffix + ".npy"
+    lang_path = prepend + "lang" + suffix + ".json"
+    eval_path = prepend + "results" + suffix + ".json"
+    json_data = prepend + "caveau_flat" + suffix + ".json"
+
+    return params_path, model_path, (og_lang_path if not json_ else json_data), x_data, y_data, lang_path, eval_path

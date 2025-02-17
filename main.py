@@ -12,7 +12,9 @@ from sympy.strategies.branch import yieldify
 def main(
         do_train: bool = False,
         pho: bool = True,
+        suffix: str = "",
         make_lang: bool = False,
+        json_lang: bool = False,
         full_eval: bool = False,
 
         num_epochs: int = 10,
@@ -27,10 +29,13 @@ def main(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho)
+    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
 
     if make_lang:
-        X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+        if json_lang:
+            X, y, l1, l2 = Language.read_data_from_json(og_lang_path)
+        else:
+            X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
         Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
 
     if do_train:
@@ -123,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=2048, help="Batch size")
     parser.add_argument("--teacher_forcing_ratio", type=float, default=0.5, help="Teacher forcing ratio")
     parser.add_argument("--nb_predictions", type=int, default=10, help="Number of predictions to make")
+    parser.add_argument("--suffix", type=str, default="", help="Suffix for file names (overrides `--pho`)")
 
     args = parser.parse_args()
 
@@ -133,6 +139,7 @@ if __name__ == '__main__':
     main(
         do_train=args.train,
         pho=args.pho,
+        suffix=args.suffix,
         make_lang=args.make_lang,
         full_eval=args.full_eval,
         num_epochs=args.num_epochs,
