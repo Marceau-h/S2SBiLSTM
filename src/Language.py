@@ -1,4 +1,5 @@
 import json
+from re import Pattern, compile, escape
 from pathlib import Path
 from typing import Tuple, Optional, List
 from unicodedata import normalize
@@ -159,19 +160,25 @@ class Language:
 
         pairs = [
             (
-                e, k
+                e.strip(), k.strip()
             )
             for k, v in pairs.items()
             for e in v
-            if len(k) <= max_length
-            and len(e) <= max_length
+            if 0 < len(l2.sent_iter(k)) <= max_length
+            and 0 < len(l1.sent_iter(e)) <= max_length
         ]
 
-        lens = [len(k) for k, _ in pairs]
-        print(min(lens), max(lens), sum(lens) / len(lens))
+        pairs = [
+            (
+                e, k
+            )
+            for e, k in pairs
+            if e and k
+        ]
 
-        l1 = cls('1')
-        l2 = cls('2', sep='-')
+        lens = [len(l1.sent_iter(pair[0])) for pair in pairs]
+        print(len(lens), min(lens), max(lens), sum(lens) / len(lens))
+
 
         for pair in pairs:
             l1.add_sentence(pair[0])
@@ -318,6 +325,9 @@ if __name__ == '__main__':
     json_ = True
     midi = True
 
+    midi_seps = ([",", " ", "[", "]"], "-")
+    ly_seps = ([" ", "\\", "\n", "{", "}", "|", "(", ")", "[", "]"], "-")
+    l1_sep, l2_sep = midi_seps if midi else ly_seps
     suffix = "" if not json else "_midi" if midi else "_ly"
 
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
@@ -325,7 +335,7 @@ if __name__ == '__main__':
     print(params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path)
 
     if json_:
-        X, y, l1, l2 = Language.read_data_from_json(og_lang_path)
+        X, y, l1, l2 = Language.read_data_from_json(og_lang_path, max_length=800, l1_sep=l1_sep, l2_sep=l2_sep)
     else:
         X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
 
