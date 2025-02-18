@@ -67,6 +67,7 @@ def do_one_sent(model, sentence, lang_input, lang_output, device=None):
 
 
 def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None, do_print=True):
+    print(f"Evaluating.. {len(X_test) = }, {len(y_test) = }")
     if nb_predictions is None:
         pbar = range(len(X_test))
     elif isinstance(nb_predictions, int) and nb_predictions > 0:
@@ -99,12 +100,14 @@ def random_predict(X_test, y_test, lang_input, lang_output, model, device=None, 
 
     res = core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions, device)
 
+    input_joiner = " " if lang_input.re_sep is not None else "" if lang_input.sep is None else lang_input.sep
+
     if print_output:
         for input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer in res:
             print(f"""
 Lengths (\\wo EOS) - Input: {len(input_sentence_lst) - 6}, Target: {len(target_output_lst) - 2}, Predicted: {len(predicted_output_lst) - 2}
 
-Input sentence: {"".join(input_sentence_lst)}
+Input sentence: {input_joiner.join(input_sentence_lst)}
 Target output: {" | ".join(target_output_lst)}
 Predicted output: {" | ".join(predicted_output_lst)}
 
