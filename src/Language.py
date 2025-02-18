@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional, List
 from unicodedata import normalize
 
 import numpy as np
@@ -31,15 +31,32 @@ class Language:
         }
         self.n_tokens = 3
         self.max_length = 0
-        self.sep = sep
+        self.sep: Optional[str | List[str]] = sep
+        self.re_sep : Optional[str] = None
+        self.re_sep_compiled : Optional[Pattern] = None
 
     @staticmethod
     def normalize(s):
         return normalize('NFKC', s)
 
     def sent_iter(self, sentence):
-        if self.sep:
-            return sentence.split(self.sep)
+        if self.sep is not None:
+            if self.re_sep is None:
+                if self.re_sep is not None:
+                    self.re_sep_compiled = compile(self.re_sep)
+                    return self.re_sep_compiled.split(sentence)
+                elif isinstance(self.sep, list):
+                    self.re_sep = '|'.join(f"(?:{escape(s)})" for s in self.sep)
+                    self.re_sep_compiled = compile(self.re_sep)
+                    return self.re_sep_compiled.split(sentence)
+                elif isinstance(self.sep, str):
+                    return sentence.split(self.sep)
+                else:
+                    raise ValueError("sep must be a string or a list of strings")
+            elif isinstance(self.re_sep_compiled, Pattern):
+                return self.re_sep_compiled.split(sentence)
+            else:
+                raise ValueError("re_sep must be a Pattern object (if defined)")
         else:
             return sentence
 
@@ -123,7 +140,9 @@ class Language:
     def read_data_from_json(
             cls,
             data_path: str | Path,
-            max_length=3_500,
+            max_length=1000,
+            l1_sep = None,
+            l2_sep = None,
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
         if isinstance(data_path, str):
             data_path = Path(data_path)
@@ -134,6 +153,9 @@ class Language:
 
         with data_path.open("r") as f:
             pairs = json.load(f)
+
+        l1 = cls('1', sep=l1_sep)
+        l2 = cls('2', sep=l2_sep)
 
         pairs = [
             (
@@ -225,6 +247,13 @@ class Language:
 
         return X, y, l1, l2
 
+    @staticmethod
+    def clear_pattern_field_only(obj):
+        if isinstance(obj, Pattern):
+            return None
+        else:
+            raise TypeError
+
     @classmethod
     def save_data(
             cls,
@@ -255,8 +284,7 @@ class Language:
         np.save(y_path, y)
 
         with open(lang_path, 'w') as f:
-            json.dump({'1': l1.__dict__, '2': l2.__dict__}, f, ensure_ascii=False, indent=4)
-
+            json.dump({'1': l1.__dict__, '2': l2.__dict__}, f, ensure_ascii=False, indent=4, default=cls.clear_pattern_field_only)
 
 def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_path: str | Path = 'lang.json'):
     if isinstance(x_path, str):
