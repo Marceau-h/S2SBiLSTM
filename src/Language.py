@@ -100,8 +100,8 @@ class Language:
                 p0, p1
             )
             for p0, p1 in pairs
-            if len(p0) <= max_length
-            and len(p1) <= max_length
+            if 0 < len(p0) <= max_length
+            and 0 < len(p1) <= max_length
         ]
 
         l1 = cls('1')
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     l1_sep, l2_sep = midi_seps if midi else ly_seps
     suffix = "" if not json else "_midi" if midi else "_ly"
 
-    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
+    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix, json_)
 
     print(params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path)
 
