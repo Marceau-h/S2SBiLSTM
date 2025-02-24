@@ -6,7 +6,6 @@ from src.Language import Language, read_data
 from src.eval import random_predict, do_one_sent, do_full_eval
 from src.model import save_model, load_model, paths
 from src.train import auto_train
-from sympy.strategies.branch import yieldify
 
 
 def main(
@@ -119,6 +118,7 @@ if __name__ == '__main__':
     parser.add_argument("--pho", action="store_true", help="Use phonetic data")
     parser.add_argument("--make_lang", action="store_true", help="Make language data")
     parser.add_argument("--full_eval", action="store_true", help="Run full evaluation")
+    parser.add_argument("--suffix", type=str, default="", help="Suffix for file names (overrides `--pho`)")
 
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--embed_size", type=int, default=512, help="Embedding size")
@@ -128,7 +128,6 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=2048, help="Batch size")
     parser.add_argument("--teacher_forcing_ratio", type=float, default=0.5, help="Teacher forcing ratio")
     parser.add_argument("--nb_predictions", type=int, default=10, help="Number of predictions to make")
-    parser.add_argument("--suffix", type=str, default="", help="Suffix for file names (overrides `--pho`)")
 
     args = parser.parse_args()
 
