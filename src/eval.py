@@ -161,9 +161,9 @@ Same diff: {same_diff}
         if nb_predictions > 1:
             print(f"Mean exact match ratio: {mean(r[4] for r in res):.3f}")
             print(f"Mean WER: {mean(r[5] for r in res):.3f}")
-            print(f"Mean sum diff: {mean(r[6] for r in res):.3f}")
-            print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f}")
-            print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f}")
+            print(f"Mean sum diff: {mean(abs(r[6]) for r in res):.3f} (abs)")
+            print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f} (abs)")
+            print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f} (abs)")
             print(f"Same diff ratio: {mean(r[9] for r in res):.3f}")
 
 
