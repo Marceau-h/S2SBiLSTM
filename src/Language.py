@@ -323,19 +323,25 @@ if __name__ == '__main__':
 
     pho = False
     json_ = True
-    midi = True
+    json_mode = 2
+    suffixes = ["_ly", "_midi", "_notes"]
+    max_lens = [800, 800, 150]
 
     midi_seps = ([",", " ", "[", "]"], "-")
     ly_seps = ([" ", "\\", "\n", "{", "}", "|", "(", ")", "[", "]"], "-")
-    l1_sep, l2_sep = midi_seps if midi else ly_seps
-    suffix = "" if not json else "_midi" if midi else "_ly"
+    notes_seps = (" | ", "-")
+    seps = [ly_seps, midi_seps, notes_seps]
+
+    l1_sep, l2_sep = seps[json_mode]
+    suffix = "" if not json else suffixes[json_mode]
+    max_len = 1000 if not json else max_lens[json_mode]
 
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix, json_)
 
     print(params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path)
 
     if json_:
-        X, y, l1, l2 = Language.read_data_from_json(og_lang_path, max_length=800, l1_sep=l1_sep, l2_sep=l2_sep)
+        X, y, l1, l2 = Language.read_data_from_json(og_lang_path, max_length=max_len , l1_sep=l1_sep, l2_sep=l2_sep)
     else:
         X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
 
