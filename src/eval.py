@@ -1,6 +1,7 @@
 import re
 from random import sample
 from statistics import mean
+from typing import List, Optional, Tuple
 
 from jiwer import process_words, visualize_alignment
 from torch import device as torch_device
@@ -66,12 +67,36 @@ def do_one_sent(model, sentence, lang_input, lang_output, device=None):
     return input_sentence_lst, predicted_output_lst
 
 
+
+def eval_numbers(target: List[str], predicted: List[str]) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[bool]]:
+    try:
+        target = [int(token) for token in target[1:-1]]
+        predicted = [int(token) for token in predicted[1:-1]]
+    except ValueError:
+        return None, None, None, None
+
+    if target == predicted:
+        return 0, 0, 0, True
+
+    sum_diff = sum(target) - sum(predicted)
+
+    len_diff = len(target) - len(predicted)
+
+    mean_diff = sum_diff / len(target)
+
+    diffs = [t - p for t, p in zip(target, predicted)]
+    same_diff = all(d == diffs[0] for d in diffs)
+
+    return sum_diff, len_diff, mean_diff, same_diff
+
+
+
 def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=None, device=None, do_print=True):
     print(f"Evaluating.. {len(X_test) = }, {len(y_test) = }")
     if nb_predictions is None:
         pbar = range(len(X_test))
     elif isinstance(nb_predictions, int) and nb_predictions > 0:
-        pbar = sample(range(len(X_test)), nb_predictions)
+        pbar = sample(range(len(X_test)), nb_predictions) if nb_predictions < len(X_test) else range(len(X_test))
     else:
         raise ValueError("nb_predictions must be a positive integer or None")
 
@@ -88,9 +113,11 @@ def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=Non
 
         exact_match = target_output_lst == predicted_output_lst
 
+        sum_diff, len_diff, mean_diff, same_diff = eval_numbers(target_output_lst, predicted_output_lst)
+
         aligned, wer = align_words(target_output_lst, predicted_output_lst)
 
-        res.append((input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer))
+        res.append((input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer, sum_diff, len_diff, mean_diff, same_diff))
 
     return res
 
@@ -103,7 +130,18 @@ def random_predict(X_test, y_test, lang_input, lang_output, model, device=None, 
     input_joiner = " " if lang_input.re_sep is not None else "" if lang_input.sep is None else lang_input.sep
 
     if print_output:
-        for input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer in res:
+        for (
+                input_sentence_lst,
+                target_output_lst,
+                predicted_output_lst,
+                aligned,
+                exact_match,
+                wer,
+                sum_diff,
+                len_diff,
+                mean_diff,
+                same_diff
+        ) in res:
             print(f"""
 Lengths (\\wo EOS) - Input: {len(input_sentence_lst) - 6}, Target: {len(target_output_lst) - 2}, Predicted: {len(predicted_output_lst) - 2}
 
@@ -115,10 +153,19 @@ Alignment:\n{aligned}
 
 Exact match: {exact_match}
 WER: {wer:.2f}
+Sum diff: {sum_diff}
+Len diff: {len_diff}
+Mean diff: {mean_diff:.2f}
+Same diff: {same_diff}
 """)
         if nb_predictions > 1:
-            print(f"Mean exact match ratio: {mean(r[-2] for r in res):.3f}")
-            print(f"Mean WER: {mean(r[-1] for r in res):.3f}")
+            print(f"Mean exact match ratio: {mean(r[4] for r in res):.3f}")
+            print(f"Mean WER: {mean(r[5] for r in res):.3f}")
+            print(f"Mean sum diff: {mean(r[6] for r in res):.3f}")
+            print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f}")
+            print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f}")
+            print(f"Same diff ratio: {mean(r[9] for r in res):.3f}")
+
 
     return res
 
@@ -143,7 +190,10 @@ def evaluate(X_test, y_test, lang_input, lang_output, model, device=None, do_pri
             "target_length": len(r[1]) - 2,
             "predicted_length": len(r[2]) - 2,
             "exact_match": r[4],
-            "wer": r[5]
+            "wer": r[5],
+            "sum_diff": r[6],
+            "len_diff": r[7],
+            "mean_diff": r[8],
         }
         for r in res
     ]
@@ -157,6 +207,9 @@ def do_full_eval(X_test, y_test, lang_input, lang_output, model, eval_path, devi
     import polars as pl
 
     df = pl.DataFrame(res_for_save)
+
+    df = df[[s.name for s in df if not (s.null_count() == df.height)]]  # remove columns with only null values (numbers cols if there arent any)
+
     df.write_csv(eval_path.with_suffix(".csv"))
     df.write_ndjson(eval_path.with_suffix(".ndjson"))
     df.write_parquet(eval_path.with_suffix(".parquet"))
