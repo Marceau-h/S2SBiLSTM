@@ -72,7 +72,7 @@ def eval_numbers(
         target: List[str],
         predicted: List[str],
         lang_output: "Language",
-) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[bool]]:
+) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[bool], Optional[bool]]:
     lang_spesific_tokens = {lang_output.SOS_TOKEN, lang_output.EOS_TOKEN, lang_output.PAD_TOKEN}
     try:
         target = [int(token) for token in target[1:-1] if token not in lang_spesific_tokens]
@@ -93,7 +93,9 @@ def eval_numbers(
     diffs = [t - p for t, p in zip(target, predicted)]
     same_diff = all(d == diffs[0] for d in diffs)
 
-    return sum_diff, len_diff, mean_diff, same_diff
+    same_diff_same_len = same_diff and not len_diff
+
+    return sum_diff, len_diff, mean_diff, same_diff, same_diff_same_len
 
 
 
@@ -119,11 +121,11 @@ def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=Non
 
         exact_match = target_output_lst == predicted_output_lst
 
-        sum_diff, len_diff, mean_diff, same_diff = eval_numbers(target_output_lst, predicted_output_lst, lang_output)
+        sum_diff, len_diff, mean_diff, same_diff, same_diff_same_len = eval_numbers(target_output_lst, predicted_output_lst, lang_output)
 
         aligned, wer = align_words(target_output_lst, predicted_output_lst)
 
-        res.append((input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer, sum_diff, len_diff, mean_diff, same_diff))
+        res.append((input_sentence_lst, target_output_lst, predicted_output_lst, aligned, exact_match, wer, sum_diff, len_diff, mean_diff, same_diff, same_diff_same_len))
 
     return res
 
@@ -146,7 +148,8 @@ def random_predict(X_test, y_test, lang_input, lang_output, model, device=None, 
                 sum_diff,
                 len_diff,
                 mean_diff,
-                same_diff
+                same_diff,
+                same_diff_same_len,
         ) in res:
             # mean_diff = mean_diff if mean_diff is not None else "N/A"
             print(f"""
@@ -164,6 +167,7 @@ Sum diff: {sum_diff}
 Len diff: {len_diff}
 Mean diff: {mean_diff}
 Same diff: {same_diff}
+Same diff same len: {same_diff_same_len}
 """)
         if nb_predictions > 1:
             print(f"Mean exact match ratio: {mean(r[4] for r in res):.3f}")
@@ -175,6 +179,7 @@ Same diff: {same_diff}
                 print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f} (abs)")
                 print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f} (abs)")
                 print(f"Same diff ratio: {mean(r[9] for r in res):.3f}")
+                print(f"Same diff same len ratio: {mean(r[10] for r in res):.3f}")
 
 
     return res
