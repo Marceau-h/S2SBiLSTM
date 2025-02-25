@@ -68,11 +68,17 @@ def do_one_sent(model, sentence, lang_input, lang_output, device=None):
 
 
 
-def eval_numbers(target: List[str], predicted: List[str]) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[bool]]:
+def eval_numbers(
+        target: List[str],
+        predicted: List[str],
+        lang_output: "Language",
+) -> Tuple[Optional[int], Optional[int], Optional[float], Optional[bool]]:
+    lang_spesific_tokens = {lang_output.SOS_TOKEN, lang_output.EOS_TOKEN, lang_output.PAD_TOKEN}
     try:
-        target = [int(token) for token in target[1:-1]]
-        predicted = [int(token) for token in predicted[1:-1]]
+        target = [int(token) for token in target[1:-1] if token not in lang_spesific_tokens]
+        predicted = [int(token) for token in predicted[1:-1] if token not in lang_spesific_tokens]
     except ValueError:
+        raise
         return None, None, None, None
 
     if target == predicted:
@@ -113,7 +119,7 @@ def core_eval(X_test, y_test, lang_input, lang_output, model, nb_predictions=Non
 
         exact_match = target_output_lst == predicted_output_lst
 
-        sum_diff, len_diff, mean_diff, same_diff = eval_numbers(target_output_lst, predicted_output_lst)
+        sum_diff, len_diff, mean_diff, same_diff = eval_numbers(target_output_lst, predicted_output_lst, lang_output)
 
         aligned, wer = align_words(target_output_lst, predicted_output_lst)
 
@@ -142,6 +148,7 @@ def random_predict(X_test, y_test, lang_input, lang_output, model, device=None, 
                 mean_diff,
                 same_diff
         ) in res:
+            # mean_diff = mean_diff if mean_diff is not None else "N/A"
             print(f"""
 Lengths (\\wo EOS) - Input: {len(input_sentence_lst) - 6}, Target: {len(target_output_lst) - 2}, Predicted: {len(predicted_output_lst) - 2}
 
@@ -155,16 +162,19 @@ Exact match: {exact_match}
 WER: {wer:.2f}
 Sum diff: {sum_diff}
 Len diff: {len_diff}
-Mean diff: {mean_diff:.2f}
+Mean diff: {mean_diff}
 Same diff: {same_diff}
 """)
         if nb_predictions > 1:
             print(f"Mean exact match ratio: {mean(r[4] for r in res):.3f}")
             print(f"Mean WER: {mean(r[5] for r in res):.3f}")
-            print(f"Mean sum diff: {mean(abs(r[6]) for r in res):.3f} (abs)")
-            print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f} (abs)")
-            print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f} (abs)")
-            print(f"Same diff ratio: {mean(r[9] for r in res):.3f}")
+            if all(r[6] is not None for r in res):
+                assert not any(r[6] is None for r in res)
+
+                print(f"Mean sum diff: {mean(abs(r[6]) for r in res):.3f} (abs)")
+                print(f"Mean len diff: {mean(abs(r[7]) for r in res):.3f} (abs)")
+                print(f"Mean mean diff: {mean(abs(r[8]) for r in res):.3f} (abs)")
+                print(f"Same diff ratio: {mean(r[9] for r in res):.3f}")
 
 
     return res
