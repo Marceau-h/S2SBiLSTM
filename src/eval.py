@@ -79,10 +79,10 @@ def eval_numbers(
         predicted = [int(token) for token in predicted[1:-1] if token not in lang_spesific_tokens]
     except ValueError:
         raise
-        return None, None, None, None
+        return None, None, None, None, None
 
     if target == predicted:
-        return 0, 0, 0, True
+        return 0, 0, 0, True, True
 
     sum_diff = sum(target) - sum(predicted)
 
