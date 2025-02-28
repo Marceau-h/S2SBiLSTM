@@ -111,6 +111,12 @@ def load_and_do_one_sent(sentence, pho):
 
 
 def pretty_time(ns:int) -> str:
+    """
+    Convert nanoseconds to a pretty string representation of time
+    (hours, minutes, seconds, milliseconds)
+    :param ns: The time in nanoseconds
+    :return: The pretty string representation of time of the form "Xh Ym Zs Tms"
+    """
     ns = ns // 1_000_000
     ms = ns % 1_000
     ns //= 1_000
