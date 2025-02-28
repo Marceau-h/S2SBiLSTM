@@ -1,3 +1,4 @@
+from time import perf_counter_ns as ns
 from argparse import ArgumentParser
 
 import torch
@@ -109,6 +110,18 @@ def load_and_do_one_sent(sentence, pho):
     do_one_sent(model, sentence, lang_input, lang_output, device)
 
 
+def pretty_time(ns:int) -> str:
+    ns = ns // 1_000_000
+    ms = ns % 1_000
+    ns //= 1_000
+    s = ns % 60
+    ns //= 60
+    m = ns % 60
+    ns //= 60
+    h = ns
+    return f"{h}h {m}m {s}s {ms}ms"
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
 
@@ -135,6 +148,7 @@ if __name__ == '__main__':
         load_and_do_one_sent(args.sentence, pho=args.pho)
         exit(0)
 
+    start_time = ns()
     main(
         do_train=args.train,
         pho=args.pho,
@@ -151,4 +165,4 @@ if __name__ == '__main__':
         nb_predictions=args.nb_predictions
     )
 
-    print("Done :)")
+    print(f"Done ! Took {pretty_time(ns() - start_time)}")
