@@ -1,12 +1,16 @@
 import json
 from re import Pattern, compile, escape
 from pathlib import Path
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Iterable
+from collections.abc import Collection
 from unicodedata import normalize
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+RANDOM_STATE = 42
+TEST_SIZE = 0.2
+SHUFFLE = True
 
 class Language:
     SOS_ID = 0
@@ -40,7 +44,7 @@ class Language:
     def normalize(s):
         return normalize('NFKC', s)
 
-    def sent_iter(self, sentence):
+    def sent_iter(self, sentence: str) -> Collection[str]:
         if self.sep is not None:
             if self.re_sep is None:
                 if self.re_sep is not None:
@@ -60,6 +64,9 @@ class Language:
                 raise ValueError("re_sep must be a Pattern object (if defined)")
         else:
             return sentence
+
+    def sent_len(self, sentence: str) -> int:
+        return len(self.sent_iter(sentence))
 
     def add_sentence(self, sentence):
         sentence = self.normalize(sentence)
@@ -116,14 +123,14 @@ class Language:
                 (
                     [cls.SOS_ID] +
                     [
-                        l1.token2index[token] for token in l1.sent_iter(pair[0])
-                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l1.max_length - len(l1.sent_iter(pair[0]))),
+                        l1.token2index[token] for token in l1.sent_iter(pair0)
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l1.max_length - l1.sent_len(pair0)),
                     [cls.SOS_ID] +
                     [
-                        l2.token2index[token] for token in l2.sent_iter(pair[1])
-                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l2.max_length - len(l2.sent_iter(pair[1])))
+                        l2.token2index[token] for token in l2.sent_iter(pair1)
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l2.max_length - l2.sent_len(pair1))
                 )
-                for pair in pairs
+                for pair0, pair1 in pairs
                 # if (len_pair0 := len(pair[0])) <= max_length
                 # and (len_pair1 := len(pair[1])) <= max_length
             ]
@@ -164,8 +171,8 @@ class Language:
             )
             for k, v in pairs.items()
             for e in v
-            if 0 < len(l2.sent_iter(k)) <= max_length
-            and 0 < len(l1.sent_iter(e)) <= max_length
+            if 0 < l2.sent_len(k) <= max_length
+            and 0 < l1.sent_len(e) <= max_length
         ]
 
         pairs = [
@@ -176,7 +183,7 @@ class Language:
             if e and k
         ]
 
-        lens = [len(l1.sent_iter(pair[0])) for pair in pairs]
+        lens = [l1.sent_len(pair[0]) for pair in pairs]
         print(len(lens), min(lens), max(lens), sum(lens) / len(lens))
 
 
@@ -189,14 +196,14 @@ class Language:
                 (
                     [cls.SOS_ID] +
                     [
-                        l1.token2index[token] for token in l1.sent_iter(pair[0])
-                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l1.max_length - len(l1.sent_iter(pair[0]))),
+                        l1.token2index[token] for token in l1.sent_iter(pair0)
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l1.max_length - l1.sent_len(pair0)),
                     [cls.SOS_ID] +
                     [
-                        l2.token2index[token] for token in l2.sent_iter(pair[1])
-                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l2.max_length - len(l2.sent_iter(pair[1])))
+                        l2.token2index[token] for token in l2.sent_iter(pair1)
+                    ] + [cls.EOS_ID] + [cls.PAD_ID] * (l2.max_length - l2.sent_len(pair1))
                 )
-                for pair in pairs
+                for pair0, pair1 in pairs
                 # if (len_pair0 := len(pair[0])) <= max_length
                 # and (len_pair1 := len(pair[1])) <= max_length
             ]
@@ -242,17 +249,21 @@ class Language:
         with open(lang_path, 'r') as f:
             lang = json.load(f)
 
-        lang['1']['token2index'] = {k: int(v) for k, v in lang['1']['token2index'].items()}
-        lang['1']['index2token'] = {int(k): v for k, v in lang['1']['index2token'].items()}
-        lang['2']['token2index'] = {k: int(v) for k, v in lang['2']['token2index'].items()}
-        lang['2']['index2token'] = {int(k): v for k, v in lang['2']['index2token'].items()}
-
         l1 = cls('1')
         l2 = cls('2')
-        l1.__dict__.update(lang['1'])
-        l2.__dict__.update(lang['2'])
+
+        l1.restore_lang(lang['1'])
+        l2.restore_lang(lang['2'])
 
         return X, y, l1, l2
+
+    def reintify_lang(self):
+        self.token2index = {k: int(v) for k, v in self.token2index.items()}
+        self.index2token = {int(k): v for k, v in self.index2token.items()}
+
+    def restore_lang(self, lang: dict):
+        self.__dict__.update(lang)
+        self.reintify_lang()
 
     @staticmethod
     def clear_pattern_field_only(obj):
@@ -314,7 +325,7 @@ def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_p
     assert lang_path.exists(), f"Language path {lang_path} does not exist"
 
     X, y, lang_input, lang_output = Language.load_data(x_path, y_path, lang_path)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, shuffle=SHUFFLE)
 
     return X_train, X_test, y_train, y_test, lang_input, lang_output
 
