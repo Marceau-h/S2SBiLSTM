@@ -154,23 +154,15 @@ def paths(pho: bool = False, suffix: str = "", json_: bool = False) -> tuple[str
         relative_to_root += 1
         cwd = cwd.parent
 
-    prepend = "../" * relative_to_root
+    prepend = Path("../" * relative_to_root)
 
-    # params_path = prepend / Path("params_pho.json" if pho else "params.json")
-    # model_path = prepend / Path("model_pho.pth" if pho else "model.pth")
-    # og_lang_path = prepend / Path("all_noyeaux_pho.txt" if pho else "all_noyeaux.txt")
-    # x_data = prepend / Path("X_pho.npy" if pho else "X.npy")
-    # y_data = prepend / Path("y_pho.npy" if pho else "y.npy")
-    # lang_path = prepend / Path("lang_pho.json" if pho else "lang.json")
-    # eval_path = prepend / Path("results_pho.json" if pho else "results.json")
-
-    params_path = prepend + "params" + suffix + ".json"
-    model_path = prepend + "model" + suffix + ".pth"
-    og_lang_path = prepend + "all_noyeaux" + suffix + ".txt"
-    x_data = prepend + "X" + suffix + ".npy"
-    y_data = prepend + "y" + suffix + ".npy"
-    lang_path = prepend + "lang" + suffix + ".json"
-    eval_path = prepend + "results" + suffix + ".json"
-    json_data = prepend + "caveau_flat" + suffix + ".json"
+    params_path = prepend / f"params{suffix}.json"
+    model_path = prepend / f"model{suffix}.pth"
+    og_lang_path = prepend /  f"all_noyeaux{suffix}.txt"
+    x_data = prepend / f"X{suffix}.npy"
+    y_data = prepend / f"y{suffix}.npy"
+    lang_path = prepend / f"lang{suffix}.json"
+    eval_path = prepend / f"results{suffix}.json"
+    json_data = prepend / f"caveau_flat{suffix}.json"
 
     return params_path, model_path, (og_lang_path if not json_ else json_data), x_data, y_data, lang_path, eval_path
