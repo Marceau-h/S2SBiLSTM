@@ -78,7 +78,7 @@ def eval_numbers(
         target = [int(token) for token in target[1:-1] if token not in lang_spesific_tokens]
         predicted = [int(token) for token in predicted[1:-1] if token not in lang_spesific_tokens]
     except ValueError:
-        raise
+        # raise
         return None, None, None, None, None
 
     if target == predicted:
@@ -186,15 +186,38 @@ Same diff same len: {same_diff_same_len}
 
 
 def evaluate(X_test, y_test, lang_input, lang_output, model, device=None, do_print=True):
+    num_mode = False
     device = device or torch_device("cuda" if is_available() else "cpu")
 
     res = core_eval(X_test, y_test, lang_input, lang_output, model, None, device, do_print)
 
-    exact_match = mean(r[-2] for r in res)
-    wer_score = mean(r[-1] for r in res)
+    exact_match = mean(r[4] for r in res)
+    wer_score = mean(r[5] for r in res)
+    if all(r[6] is not None for r in res):
+        num_mode = True
+        sum_diff = mean(r[6] for r in res)
+        len_diff = mean(r[7] for r in res)
+        mean_diff = mean(r[8] for r in res)
+        same_diff = mean(r[9] for r in res)
+        same_diff_same_len = mean(r[10] for r in res)
+    else:
+        sum_diff = len_diff = mean_diff = same_diff = same_diff_same_len = None
+
 
     if do_print:
-        print(f"Exact match ratio: {exact_match:.3f}\nMean WER: {wer_score:.3f}")
+        print(
+            f"Exact match ratio: {exact_match:.3f}\n"
+            f"Mean WER: {wer_score:.3f}"
+        )
+        if num_mode:
+            print(
+                f"Mean sum diff: {sum_diff:.3f} (abs)\n"
+                f"Mean len diff: {len_diff:.3f} (abs)\n"
+                f"Mean mean diff: {mean_diff:.3f} (abs)\n"
+                f"Same diff ratio: {same_diff:.3f}\n"
+                f"Same diff same len ratio: {same_diff_same_len:.3f}"
+            )
+
 
     res_for_save = [
         {
@@ -209,6 +232,8 @@ def evaluate(X_test, y_test, lang_input, lang_output, model, device=None, do_pri
             "sum_diff": r[6],
             "len_diff": r[7],
             "mean_diff": r[8],
+            "same_diff": r[9],
+            "same_diff_same_len": r[10],
         }
         for r in res
     ]
