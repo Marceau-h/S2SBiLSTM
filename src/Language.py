@@ -356,6 +356,35 @@ def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_p
 
     return X_train, X_test, y_train, y_test, lang_input, lang_output
 
+
+def extract_test_data(
+        x_path: str | Path = 'X.npy',
+        y_path: str | Path = 'y.npy',
+        lang_path: str | Path = 'lang.json',
+        test_save_path: Optional[str | Path] = None
+) -> Optional[str]:
+    X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_path, y_path, lang_path)
+
+    if test_save_path is not None:
+        if isinstance(test_save_path, str):
+            test_save_path = Path(test_save_path)
+        elif not isinstance(test_save_path, Path):
+            raise ValueError("test_save_path must be a string or a Path object")
+
+        buf = test_save_path.open(mode="w", encoding="utf-8")
+    else:
+        buf = StringIO()
+
+    for i in range(len(X_test)):
+        buf.write(f"{lang_input.sentence_from_indices(X_test[i])}\t{lang_output.sentence_from_indices(y_test[i])}\n")
+
+    if isinstance(buf, StringIO):
+        return buf.getvalue()
+
+    buf.close()
+    return None
+
+
 if __name__ == '__main__':
     from model import paths
 
