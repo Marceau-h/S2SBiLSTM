@@ -102,9 +102,9 @@ def main(
         do_full_eval(X_test, y_test, lang_input, lang_output, model, eval_path, device=device)
 
 
-def load_and_do_one_sent(sentence, pho):
+def load_and_do_one_sent(sentence, pho, suffix):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho)
+    params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
     model = load_model(params_path, model_path, device)
     X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
     do_one_sent(model, sentence, lang_input, lang_output, device)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.sentence:
-        load_and_do_one_sent(args.sentence, pho=args.pho)
+        load_and_do_one_sent(args.sentence, pho=args.pho, suffix=args.suffix)
         exit(0)
 
     start_time = ns()
