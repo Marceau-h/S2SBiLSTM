@@ -21,7 +21,7 @@ class Language:
     PAD_ID = 2
     PAD_TOKEN = 'PAD'
 
-    def __init__(self, name, sep=None):
+    def __init__(self, name:str, sep: Optional[str | List[str]] = None) -> None:
         self.name = name
         self.token2index = {
             self.SOS_TOKEN: self.SOS_ID,
@@ -42,7 +42,13 @@ class Language:
         self.re_sep_compiled : Optional[Pattern] = None
 
     @staticmethod
-    def normalize(s):
+    def normalize(s: str) -> str:
+        """
+        Normalize a string to NFKC form (the most composed form)
+        Prevents from getting two codes for the same character, i.e 'é' (U+00E9) and 'é' (U+0065 U+0301)
+        :param s: string to normalize
+        :return: normalized string
+        """
         return normalize('NFKC', s)
 
     def sent_iter(self, sentence: str) -> Collection[str]:
@@ -89,9 +95,19 @@ class Language:
         raise ValueError("sep must be a string or a list of strings, can't concatenate back the sentence with the given sep")
 
     def sent_len(self, sentence: str) -> int:
+        """
+        Function to get the length of a sentence
+        :param sentence: sentence to get the length of
+        :return: length of the sentence
+        """
         return len(self.sent_iter(sentence))
 
-    def add_sentence(self, sentence):
+    def add_sentence(self, sentence: str) -> None:
+        """
+        Function to add a sentence to the language
+        :param sentence: sentence to add
+        :return: None
+        """
         sentence = self.normalize(sentence)
         iterator_ = self.sent_iter(sentence)
 
@@ -100,7 +116,12 @@ class Language:
 
         self.max_length = max(self.max_length, len(iterator_))
 
-    def add_token(self, token):
+    def add_token(self, token: str) -> None:
+        """
+        Function to add a token to the language (if it is not already in it)
+        :param token: token to add
+        :return: None
+        """
         if token not in self.token2index:
             self.token2index[token] = self.n_tokens
             self.token2count[token] = 1
@@ -109,12 +130,42 @@ class Language:
         else:
             self.token2count[token] += 1
 
+    def indices_from_sentence(self, sentence: str) -> List[int]:
+        """
+        Function to get the indices from a sentence
+        :param sentence: sentence to get the indices from
+        :return: list of indices
+        """
+        return [self.SOS_ID] + [self.token2index[token] for token in self.sent_iter(sentence)] + [self.EOS_ID] + [self.PAD_ID] * (self.max_length - self.sent_len(sentence))
+
+    def sentence_from_indices(self, indices: List[int]) -> str:
+        """
+        Function to get the sentence from the indices
+        :param indices: list of indices to get the sentence from
+        :return: sentence
+        """
+        return self.sent_uniter([self.index2token[index] for index in indices if index not in [self.SOS_ID, self.EOS_ID, self.PAD_ID]])
+
     @classmethod
     def read_data_from_txt(
             cls,
             data_path: str | Path,
             max_length=75,
+            l1_sep: Optional[str] = None,
+            l2_sep: Optional[str] = " | ",
+            pairs_sep: str = "\t",
+            instance_sep: str = "\n"
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
+        """
+        Function to read data from a txt file
+        :param data_path: path to the data file
+        :param max_length: maximum length of a sentence
+        :param l1_sep: The separator for the first language
+        :param l2_sep: The separator for the second language
+        :param pairs_sep: The separator between the pairs
+        :param instance_sep: The separator between the instances
+        :return: Tuple of X, y, Language object for the input language, Language object for the output language
+        """
         if isinstance(data_path, str):
             data_path = Path(data_path)
         elif not isinstance(data_path, Path):
@@ -123,7 +174,8 @@ class Language:
         assert data_path.exists(), f"Data path {data_path} does not exist"
 
         with data_path.open("r") as f:
-            pairs = [cls.normalize(line.strip()).split("\t") for line in f if line.strip()]
+            iterable = f if instance_sep == "\n" else f.read().split(instance_sep)
+            pairs = [cls.normalize(elem.strip()).split(pairs_sep) for elem in iterable if elem.strip()]
 
         pairs = [
             (
@@ -134,8 +186,8 @@ class Language:
             and 0 < len(p1) <= max_length
         ]
 
-        l1 = cls('1')
-        l2 = cls('2', sep=' | ')
+        l1 = cls('1', sep=l1_sep)
+        l2 = cls('2', sep=l2_sep)
 
         for pair in pairs:
             l1.add_sentence(pair[0])
@@ -176,6 +228,15 @@ class Language:
             l2_sep = None,
             reverse: bool = True
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
+        """
+        Function to read data from a json file
+        :param data_path: The path to the json file
+        :param max_length: maximum length of a sentence
+        :param l1_sep: The separator for the first language
+        :param l2_sep: The separator for the second language
+        :param reverse: Whether to reverse the pairs or not (i.e. switch the input and output) (default: True)
+        :return: Tuple of X, y, Language object for the input language, Language object for the output language
+        """
         if isinstance(data_path, str):
             data_path = Path(data_path)
         elif not isinstance(data_path, Path):
@@ -252,6 +313,13 @@ class Language:
             y_path: str | Path,
             lang_path: str | Path,
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
+        """
+        Loads back the data from the files
+        :param X_path: The path to the X data
+        :param y_path: The path to the y data
+        :param lang_path: The path to the language file (containing the two languages for X and y)
+        :return:
+        """
         if isinstance(X_path, str):
             X_path = Path(X_path)
         elif not isinstance(X_path, Path):
@@ -284,16 +352,33 @@ class Language:
 
         return X, y, l1, l2
 
-    def reintify_lang(self):
+    def reintify_lang(self) -> None:
+        """
+        Make lang int again
+        Reconverts the indices from strs to ints
+        :return:
+        """
         self.token2index = {k: int(v) for k, v in self.token2index.items()}
         self.index2token = {int(k): v for k, v in self.index2token.items()}
 
-    def restore_lang(self, lang: dict):
+    def restore_lang(self, lang: dict) -> None:
+        """
+        Restore the language from a dict
+        :param self: The language object in which to restore the language
+        :param lang: dict to restore the language from
+        :return: None
+        """
         self.__dict__.update(lang)
         self.reintify_lang()
 
     @staticmethod
-    def clear_pattern_field_only(obj):
+    def clear_pattern_field_only(obj: object) -> None:
+        """
+        Function to avoid errors when trying to serialize a Pattern object, which is not serializable
+        It will clear this field by setting it to None but will raise a TypeError if the object is not a Pattern object to avoid unwanted behavior
+        :param obj: object to clear the pattern field
+        :return: None
+        """
         if isinstance(obj, Pattern):
             return None
         else:
@@ -310,6 +395,17 @@ class Language:
             y_path: str | Path,
             lang_path: str | Path,
     ) -> None:
+        """
+        Save the data to the files
+        :param X: The numpy array of the input data
+        :param y: The numpy array of the output data
+        :param l1: The Language object for the input language
+        :param l2: The Language object for the output language
+        :param X_path: The path to save the X data
+        :param y_path: The path to save the y data
+        :param lang_path: The path to save the language file
+        :return: None
+        """
         if isinstance(X_path, str):
             X_path = Path(X_path)
         elif not isinstance(X_path, Path):
@@ -332,6 +428,15 @@ class Language:
             json.dump({'1': l1.__dict__, '2': l2.__dict__}, f, ensure_ascii=False, indent=4, default=cls.clear_pattern_field_only)
 
 def read_data(x_path: str | Path = 'X.npy', y_path: str | Path = 'y.npy', lang_path: str | Path = 'lang.json'):
+    """
+    Reads the data from the files
+    The data is split into X and y data, with a determined random state and test size (see constants) to be reproducible
+    And the languages are loaded from the language file
+    :param x_path: The path to the X data
+    :param y_path: The path to the y data
+    :param lang_path: The path to the language file (containing the two languages for X and y)
+    :return: Tuple of X_train, X_test, y_train, y_test, lang_input, lang_output
+    """
     if isinstance(x_path, str):
         x_path = Path(x_path)
     elif not isinstance(x_path, Path):
@@ -412,5 +517,6 @@ if __name__ == '__main__':
     else:
         X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
 
-    Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
+    extract_test_data(x_data, y_data, lang_path, test_save_path=Path("test.txt"))
+    print("Done")
 
