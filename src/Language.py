@@ -174,6 +174,7 @@ class Language:
             max_length=1000,
             l1_sep = None,
             l2_sep = None,
+            reverse: bool = True
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
         if isinstance(data_path, str):
             data_path = Path(data_path)
@@ -190,7 +191,7 @@ class Language:
 
         pairs = [
             (
-                e.strip(), k.strip()
+                 k.strip(), e.strip()
             )
             for k, v in pairs.items()
             for e in v
@@ -200,11 +201,14 @@ class Language:
 
         pairs = [
             (
-                e, k
+                e_1, e_2
             )
-            for e, k in pairs
-            if e and k
+            for e_1, e_2 in pairs
+            if e_1 and e_2
         ]
+
+        if reverse:
+            pairs = [(e_2, e_1) for e_1, e_2 in pairs]
 
         lens = [l1.sent_len(pair[0]) for pair in pairs]
         print(len(lens), min(lens), max(lens), sum(lens) / len(lens))
