@@ -1,7 +1,8 @@
 import json
+from io import StringIO
 from re import Pattern, compile, escape
 from pathlib import Path
-from typing import Tuple, Optional, List, Iterable
+from typing import Tuple, Optional, List
 from collections.abc import Collection
 from unicodedata import normalize
 
@@ -45,25 +46,47 @@ class Language:
         return normalize('NFKC', s)
 
     def sent_iter(self, sentence: str) -> Collection[str]:
-        if self.sep is not None:
-            if self.re_sep is None:
-                if self.re_sep is not None:
-                    self.re_sep_compiled = compile(self.re_sep)
-                    return self.re_sep_compiled.split(sentence)
-                elif isinstance(self.sep, list):
-                    self.re_sep = '|'.join(f"(?:{escape(s)})" for s in self.sep)
-                    self.re_sep_compiled = compile(self.re_sep)
-                    return self.re_sep_compiled.split(sentence)
-                elif isinstance(self.sep, str):
-                    return sentence.split(self.sep)
-                else:
-                    raise ValueError("sep must be a string or a list of strings")
-            elif isinstance(self.re_sep_compiled, Pattern):
-                return self.re_sep_compiled.split(sentence)
-            else:
-                raise ValueError("re_sep must be a Pattern object (if defined)")
-        else:
+        """
+        Function to iterate over the tokens of a sentence
+        :param sentence: sentence to iterate over
+        :return: iterator over the tokens of the sentence, split by the good separator
+        """
+        if self.sep is None:
             return sentence
+
+        if self.re_sep is None:
+            if self.re_sep is not None:
+                self.re_sep_compiled = compile(self.re_sep)
+                return self.re_sep_compiled.split(sentence)
+            elif isinstance(self.sep, list):
+                self.re_sep = '|'.join(f"(?:{escape(s)})" for s in self.sep)
+                self.re_sep_compiled = compile(self.re_sep)
+                return self.re_sep_compiled.split(sentence)
+            elif isinstance(self.sep, str):
+                return sentence.split(self.sep)
+            else:
+                raise ValueError("sep must be a string or a list of strings")
+        elif isinstance(self.re_sep_compiled, Pattern):
+            return self.re_sep_compiled.split(sentence)
+        else:
+            raise ValueError("re_sep must be a Pattern object (if defined)")
+
+    def sent_uniter(self, sentence: Collection[str]) -> str:
+        """
+        Function to unite the tokens of a sentence
+        :param sentence: sentence to unite
+        :return: united sentence
+        """
+        if self.sep is None:
+            return "".join(sentence)
+
+        if isinstance(self.sep, str):
+            return self.sep.join(sentence)
+
+        if isinstance(self.sep, list):
+            return self.sep[0].join(sentence)
+
+        raise ValueError("sep must be a string or a list of strings, can't concatenate back the sentence with the given sep")
 
     def sent_len(self, sentence: str) -> int:
         return len(self.sent_iter(sentence))
