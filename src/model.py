@@ -14,6 +14,17 @@ class S2SBiLSTM(
     language="French",
     license="AGPL-3.0",
 ):
+    @staticmethod
+    def jsonify_types(obj):
+        if isinstance(obj, Path):
+            return obj.resolve().as_posix()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, torch.Tensor):
+            return obj.tolist()
+        else:
+            raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
+
     def __init__(self, input_size, output_size, embed_size, hidden_size, num_layers=1):
         super(S2SBiLSTM, self).__init__()
 
@@ -112,7 +123,7 @@ def save_model(model, params, model_path, params_path):
     params["model_path"] = model_path
 
     with open(params_path, "w") as f:
-        json.dump(params, f, ensure_ascii=False, indent=4)
+        json.dump(params, f, ensure_ascii=False, indent=4, default=model.jsonify_types)
 
     print("Model and parameters saved successfully")
 
