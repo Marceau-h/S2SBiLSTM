@@ -20,14 +20,15 @@ def train(
         teacher_forcing_ratio=0.5,
         eval_every=None,
         eval_fn=None,
-        eval_args=None
+        eval_args=None,
+        from_epoch=0,
 ):
     model.train()
 
     losses = []
     evals = []
 
-    pbar = trange(1, num_epochs + 1, desc="Epochs", unit="epoch")
+    pbar = trange(1 + from_epoch, num_epochs + 1 + from_epoch, desc="Epochs", unit="epoch")
     for epoch in pbar:
         epoch_loss = 0
 
@@ -69,6 +70,47 @@ def train(
     return model, losses, evals
 
 
+def expand_model_vocabulary(model, new_src_vocab_size, new_trg_vocab_size, device=None):
+    """Expand model embedding layers to accommodate larger vocabularies."""
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Get original embedding dimensions
+    old_src_vocab_size = model.encoder_embedding.num_embeddings
+    old_trg_vocab_size = model.decoder_embedding.num_embeddings
+    embed_dim = model.encoder_embedding.embedding_dim
+
+    # Create new embeddings with expanded size
+    new_encoder_embed = nn.Embedding(new_src_vocab_size, embed_dim)
+    new_decoder_embed = nn.Embedding(new_trg_vocab_size, embed_dim)
+
+    # Initialize with normal distribution or zeros
+    nn.init.normal_(new_encoder_embed.weight, mean=0, std=0.1)
+    nn.init.normal_(new_decoder_embed.weight, mean=0, std=0.1)
+
+    # Copy original embeddings to new ones
+    with torch.no_grad():
+        new_encoder_embed.weight[:old_src_vocab_size] = model.encoder_embedding.weight
+        new_decoder_embed.weight[:old_trg_vocab_size] = model.decoder_embedding.weight
+
+    # Replace embeddings in the model
+    model.encoder_embedding = new_encoder_embed
+    model.decoder_embedding = new_decoder_embed
+
+    # If there's an output projection layer that depends on vocab size
+    if hasattr(model, 'fc_out') and isinstance(model.fc_out, nn.Linear):
+        old_fc = model.fc_out
+        new_fc = nn.Linear(old_fc.in_features, new_trg_vocab_size)
+
+        # Copy original weights for existing vocab
+        with torch.no_grad():
+            new_fc.weight[:old_trg_vocab_size] = old_fc.weight
+            new_fc.bias[:old_trg_vocab_size] = old_fc.bias
+
+        model.fc_out = new_fc
+
+    return model.to(device)
+
 def auto_train(
         num_epochs: int = 10,
         embed_size: int = 256,
@@ -84,7 +126,8 @@ def auto_train(
         eval_every: Optional[int] = None,
         eval_fn: "function" = None,
         eval_args: dict = None,
-        device=None
+        device=None,
+        from_=None,
 ):
     if isinstance(save_root, str):
         save_root = Path(save_root)
@@ -105,12 +148,23 @@ def auto_train(
     input_size = lang_input.n_tokens
     output_size = lang_output.n_tokens
 
-    # Initialize model
     model = S2SBiLSTM(input_size, output_size, embed_size, hidden_size, num_layers).to(device)
-
-    # Training setup
     optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss(ignore_index=0)  # Assuming padding index is 0
+
+    if from_ is not None:
+        model, state, old_vocab_size = from_
+        # model.load_state_dict(state["model_state_dict"])
+        optimizer.load_state_dict(state["optimizer_state_dict"])
+        criterion.load_state_dict(state["criterion_state_dict"])
+        # num_epochs += state["epoch"]
+
+        if input_size != old_vocab_size:
+            model = expand_model_vocabulary(model, input_size, output_size, device=device)
+    else:
+        state = None
+
+    # Training setup
 
     dataset = torch.utils.data.TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -153,4 +207,12 @@ def auto_train(
         "teacher_forcing_ratio": teacher_forcing_ratio,
     }
 
-    return model, lang_input, lang_output, params, losses, evals, (X_train, X_test, y_train, y_test)
+    state = {
+        "epoch": num_epochs + 1,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "criterion_state_dict": criterion.state_dict(),
+        "loss": losses[-1],
+    }
+
+    return model, lang_input, lang_output, (params, state), losses, evals, (X_train, X_test, y_train, y_test)

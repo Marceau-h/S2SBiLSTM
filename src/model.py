@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from huggingface_hub import PyTorchModelHubMixin
-from torch import nn
+from torch import nn, optim
 
 
 class S2SBiLSTM(
@@ -17,7 +17,7 @@ class S2SBiLSTM(
     @staticmethod
     def jsonify_types(obj):
         if isinstance(obj, Path):
-            return obj.resolve().as_posix()
+            return obj.as_posix()
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         elif isinstance(obj, torch.Tensor):
@@ -117,13 +117,15 @@ class S2SBiLSTM(
         return [lang_output.index2token[token] for token in outputs]
 
 
-def save_model(model, params, model_path, params_path):
+def save_model(model, params, state, model_path, params_path):
     torch.save(model.state_dict(), model_path)
 
     params["model_path"] = model_path
 
     with open(params_path, "w") as f:
         json.dump(params, f, ensure_ascii=False, indent=4, default=model.jsonify_types)
+
+    torch.save(state, params_path.with_suffix(".state"))
 
     print("Model and parameters saved successfully")
 
@@ -145,11 +147,22 @@ def load_model(params_path, model_path, device):
     model.load_state_dict(
         torch.load(
             f=params.get("model_path", model_path),
-            weights_only=True
+            weights_only=False,
         )
     )
 
-    return model
+    state = torch.load(params_path.with_suffix(".state"), weights_only=False)
+    # model.load_state_dict(state["model_state_dict"], strict=False,
+    #
+    # optimizer = optim.Adam(model.parameters(), lr=params["optimizer_parameters"]["lr"])
+    # optimizer.load_state_dict(state["optimizer_state_dict"])
+    #
+    # criterion = nn.CrossEntropyLoss(ignore_index=0)
+    # criterion.load_state_dict(state["criterion_state_dict"])
+
+    old_vocab_size = model.encoder_embedding.weight.shape[1]
+
+    return model, state, old_vocab_size
 
 
 def paths(pho: bool = False, suffix: str = "", json_: bool = False) -> tuple[str, str, str, str, str, str, str]:

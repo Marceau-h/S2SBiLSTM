@@ -25,6 +25,7 @@ def main(
         batch_size: int = 2048,
         teacher_forcing_ratio: float = 0.5,
         nb_predictions: int = 10,
+        fine_tune_from: str = None
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -38,12 +39,18 @@ def main(
             X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
         Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
 
+    if fine_tune_from:
+        fine_tune_params_path, fine_tune_model_path, *_ = paths(pho, fine_tune_from)
+        from_ = load_model(fine_tune_params_path, fine_tune_model_path, device)
+    else:
+        from_ = None
+
     if do_train:
         (
             model,
             lang_input,
             lang_output,
-            params,
+            (params, state),
             losses,
             evals,
             (X_train, X_test, y_train, y_test),
@@ -59,14 +66,15 @@ def main(
             y_data=y_data,
             lang_path=lang_path,
             device=device,
+            from_=from_,
         )
 
         print(params)
 
-        save_model(model, params, model_path, params_path)
+        save_model(model, params, state, model_path, params_path)
 
     else:
-        model = load_model(params_path, model_path, device)
+        model, state = load_model(params_path, model_path, device)
 
         X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
         print("Model, data, and parameters loaded successfully")
@@ -105,7 +113,7 @@ def main(
 def load_and_do_one_sent(sentence, pho, suffix):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
-    model = load_model(params_path, model_path, device)
+    model, state = load_model(params_path, model_path, device)
     X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
     do_one_sent(model, sentence, lang_input, lang_output, device)
 
@@ -148,6 +156,8 @@ if __name__ == '__main__':
     parser.add_argument("--teacher_forcing_ratio", type=float, default=0.5, help="Teacher forcing ratio")
     parser.add_argument("--nb_predictions", type=int, default=10, help="Number of predictions to make")
 
+    parser.add_argument("--fine_tune_from", type=str, default=None, help="Suffix to fine-tune from")
+
     args = parser.parse_args()
 
     if args.sentence:
@@ -168,7 +178,8 @@ if __name__ == '__main__':
         lr=args.lr,
         batch_size=args.batch_size,
         teacher_forcing_ratio=args.teacher_forcing_ratio,
-        nb_predictions=args.nb_predictions
+        nb_predictions=args.nb_predictions,
+        fine_tune_from=args.fine_tune_from
     )
 
     print(f"Done ! Took {pretty_time(ns() - start_time)}")
