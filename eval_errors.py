@@ -2,6 +2,7 @@ from pathlib import Path
 
 import polars as pl
 from tqdm.auto import tqdm
+import plotly.express as px
 
 
 def keep_errors_only(df: pl.DataFrame) -> pl.DataFrame:
@@ -94,12 +95,15 @@ if __name__ == '__main__':
         df_res.append(
             {
                 "file": df_path.stem,
+                "proba": float(".".join(df_path.stem.split("_")[1:])),
                 "nb_test": nb_test,
                 "nb_err": nb_err,
                 "good_length": good_length,
                 "same_last_token": same_last_token,
                 "good_length_nb": good_length_nb,
                 "same_last_token_nb": same_last_token_nb,
+                "error_ratio": nb_err / nb_test,
+                "accuracy": 1 - nb_err / nb_test,
                 "good_length_ratio": good_length / nb_err,
                 "same_last_token_ratio": same_last_token / nb_err,
                 "good_length_nb_ratio": good_length_nb / nb_test,
@@ -112,5 +116,81 @@ if __name__ == '__main__':
     df_res.write_parquet(out_path / "res.parquet")
     df_res.write_csv(out_path / "res.csv")
 
+    df_res = df_res.filter(pl.col("proba").ne(0))
 
+    fig = px.scatter(
+        df_res,
+        x="proba",
+        y="error_ratio",
+        # color="proba",
+        trendline="lowess",
+        title="Error ratio by probability",
+        labels={
+            "proba": "Probability",
+            "file": "File",
+            "error_ratio": "Error ratio",
+        },
+        trendline_options=dict(frac=0.1),
+    )
+
+    fig.write_html(out_path / "error_ratio_vs_proba.html")
+    fig.write_image(out_path / "error_ratio_vs_proba.svg")
+    fig.write_image(out_path / "error_ratio_vs_proba.png")
+
+    fig = px.scatter(
+        df_res,
+        x="proba",
+        y="accuracy",
+        # color="proba",
+        trendline="lowess",
+        title="Accuracy by probability",
+        labels={
+            "proba": "Probability",
+            "file": "File",
+            "accuracy": "Accuracy",
+        },
+        trendline_options=dict(frac=0.1),
+    )
+
+    fig.write_html(out_path / "accuracy_vs_proba.html")
+    fig.write_image(out_path / "accuracy_vs_proba.svg")
+    fig.write_image(out_path / "accuracy_vs_proba.png")
+
+    fig = px.scatter(
+        df_res,
+        x="proba",
+        y="good_length_nb_ratio",
+        # color="proba",
+        trendline="lowess",
+        title="Ratio de bonnes estimations de longueur par probabilité",
+        labels={
+            "proba": "Probability",
+            "file": "File",
+            "good_length_nb_ratio": "Good length ratio",
+        },
+        trendline_options=dict(frac=0.1),
+    )
+
+    fig.write_html(out_path / "good_length_ratio_vs_proba.html")
+    fig.write_image(out_path / "good_length_ratio_vs_proba.svg")
+    fig.write_image(out_path / "good_length_ratio_vs_proba.png")
+
+    fig = px.scatter(
+        df_res,
+        x="proba",
+        y="same_last_token_nb_ratio",
+        # color="proba",
+        trendline="lowess",
+        title="Same last token ratio by probability",
+        labels={
+            "proba": "Probability",
+            "file": "File",
+            "same_last_token_ratio": "Same last token ratio",
+        },
+        trendline_options=dict(frac=0.1),
+    )
+
+    fig.write_html(out_path / "same_last_token_ratio_vs_proba.html")
+    fig.write_image(out_path / "same_last_token_ratio_vs_proba.svg")
+    fig.write_image(out_path / "same_last_token_ratio_vs_proba.png")
 
