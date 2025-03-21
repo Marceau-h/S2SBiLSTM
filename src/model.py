@@ -165,7 +165,7 @@ def load_model(params_path, model_path, device):
     return model, state, old_vocab_size
 
 
-def paths(pho: bool = False, suffix: str = "", json_: bool = False) -> tuple[str, str, str, str, str, str, str]:
+def paths(pho: bool = False, suffix: str = "", json_: bool = False) -> tuple[Path, Path, Path, Path, Path, Path, Path]:
     assert isinstance(pho, bool), "pho must be a boolean"
     assert isinstance(suffix, str), "suffix must be a string"
 
