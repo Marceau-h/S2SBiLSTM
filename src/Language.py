@@ -191,7 +191,7 @@ class Language:
             l1 = cls('1', sep=l1_sep)
             l2 = cls('2', sep=l2_sep)
         else:
-            with open(lang_path, 'r') as f:
+            with open(from_lang, 'r') as f:
                 lang = json.load(f)
 
             l1 = cls('1')
