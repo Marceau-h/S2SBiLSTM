@@ -154,7 +154,8 @@ class Language:
             l1_sep: Optional[str] = None,
             l2_sep: Optional[str] = " | ",
             pairs_sep: str = "\t",
-            instance_sep: str = "\n"
+            instance_sep: str = "\n",
+            from_lang: Optional[Path] = None,
     ) -> Tuple[np.array, np.array, "Language", "Language"]:
         """
         Function to read data from a txt file
@@ -186,8 +187,22 @@ class Language:
             and 0 < len(p1) <= max_length
         ]
 
-        l1 = cls('1', sep=l1_sep)
-        l2 = cls('2', sep=l2_sep)
+        if from_lang is None:
+            l1 = cls('1', sep=l1_sep)
+            l2 = cls('2', sep=l2_sep)
+        else:
+            with open(lang_path, 'r') as f:
+                lang = json.load(f)
+
+            l1 = cls('1')
+            l2 = cls('2')
+
+            l1.restore_lang(lang['1'])
+            l2.restore_lang(lang['2'])
+
+            l1.sep = l1_sep
+            l2.sep = l2_sep
+
 
         for pair in pairs:
             l1.add_sentence(pair[0])
@@ -493,8 +508,8 @@ def extract_test_data(
 if __name__ == '__main__':
     from model import paths
 
-    pho = False
-    json_ = True
+    pho = True
+    json_ = False
     json_mode = 2
     suffixes = ["_ly", "_midi", "_notes"]
     max_lens = [800, 800, 150]
@@ -505,17 +520,19 @@ if __name__ == '__main__':
     seps = [ly_seps, midi_seps, notes_seps]
 
     l1_sep, l2_sep = seps[json_mode]
-    suffix = "" if not json else suffixes[json_mode]
+    suffix = "" if not json_ else suffixes[json_mode]
     max_len = 1000 if not json else max_lens[json_mode]
 
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix, json_)
 
     print(params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path)
 
-    if json_:
-        X, y, l1, l2 = Language.read_data_from_json(og_lang_path, max_length=max_len , l1_sep=l1_sep, l2_sep=l2_sep)
-    else:
-        X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+    # if json_:
+    #     X, y, l1, l2 = Language.read_data_from_json(og_lang_path, max_length=max_len , l1_sep=l1_sep, l2_sep=l2_sep, reverse=True)
+    # else:
+    #     X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+    #
+    # Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
 
     extract_test_data(x_data, y_data, lang_path, test_save_path=Path("test.txt"))
     print("Done")

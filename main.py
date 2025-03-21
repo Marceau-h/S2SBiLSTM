@@ -27,8 +27,16 @@ def main(
         nb_predictions: int = 10,
         fine_tune_from: str = None
 ):
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+
+    if fine_tune_from:
+        fine_tune_params_path, fine_tune_model_path, fine_tune_og_lang_path, fine_tune_x_data, fine_tune_y_data, fine_tune_lang_path, fine_tune_eval_path = paths(False, fine_tune_from)
+        from_ = load_model(fine_tune_params_path, fine_tune_model_path, device)
+    else:
+        from_ = None
+
 
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
 
@@ -36,14 +44,9 @@ def main(
         if json_lang:
             X, y, l1, l2 = Language.read_data_from_json(og_lang_path)
         else:
-            X, y, l1, l2 = Language.read_data_from_txt(og_lang_path)
+            X, y, l1, l2 = Language.read_data_from_txt(og_lang_path) if not fine_tune_from else Language.read_data_from_txt(og_lang_path, from_lang=fine_tune_lang_path)
         Language.save_data(X, y, l1, l2, x_data, y_data, lang_path)
 
-    if fine_tune_from:
-        fine_tune_params_path, fine_tune_model_path, *_ = paths(pho, fine_tune_from)
-        from_ = load_model(fine_tune_params_path, fine_tune_model_path, device)
-    else:
-        from_ = None
 
     if do_train:
         (
@@ -74,7 +77,7 @@ def main(
         save_model(model, params, state, model_path, params_path)
 
     else:
-        model, state = load_model(params_path, model_path, device)
+        model, state, old_vocab_size = load_model(params_path, model_path, device)
 
         X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
         print("Model, data, and parameters loaded successfully")
@@ -113,7 +116,7 @@ def main(
 def load_and_do_one_sent(sentence, pho, suffix):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params_path, model_path, og_lang_path, x_data, y_data, lang_path, eval_path = paths(pho, suffix)
-    model, state = load_model(params_path, model_path, device)
+    model, state, old_vocab_size = load_model(params_path, model_path, device)
     X_train, X_test, y_train, y_test, lang_input, lang_output = read_data(x_data, y_data, lang_path)
     do_one_sent(model, sentence, lang_input, lang_output, device)
 
