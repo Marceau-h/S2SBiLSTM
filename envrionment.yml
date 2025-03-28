@@ -1,0 +1,30 @@
+name: S2SBiLSTM
+channels:
+  - conda-forge
+  - pytorch
+  - huggingface
+  - plotly
+dependencies:
+  - numpy::conda-forge
+  - pandas::conda-forge
+  - polars::conda-forge
+  - scikit-learn::conda-forge
+  - arrow::conda-forge
+  - tqdm::conda-forge
+  - transformers::conda-forge
+  - jiwer::conda-forge
+  - urllib3::conda-forge
+  - git::conda-forge
+  - pip::conda-forge
+
+  - pytorch::pytorch
+  - torchvision::pytorch
+  - torchaudio::pytorch
+  - pytorch-cuda::pytorch
+
+  - huggingface_hub::huggingface
+
+  - plotly::plotly
+  - python-kaleido::plotly
+
+
